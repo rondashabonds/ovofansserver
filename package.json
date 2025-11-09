@@ -1,20 +1,22 @@
 {
   "name": "ovofansserver",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "ovofans server - Express API serving Drake albums for the ovoFans client",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rondashabonds/ovofansserver.git"
+  "engines": {
+    "node": "18.x"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/rondashabonds/ovofansserver/issues"
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1"
   },
-  "homepage": "https://github.com/rondashabonds/ovofansserver#readme"
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "license": "MIT"
 }

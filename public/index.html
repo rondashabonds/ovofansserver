@@ -1,48 +1,46 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>ovofans Albums API</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/styles.css" />
+  <meta charset="UTF-8">
+  <title>OVO Albums API</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <h1>ovofans — Albums API</h1>
-    <p class="sub">A small Express API serving Drake albums (for your client to fetch).</p>
-  </header>
 
-  <main class="wrap">
-    <section class="left card">
-      <h2>API Endpoints</h2>
+  <h1 class="page-title">OVO Albums API</h1>
+
+  <div class="layout">
+
+    <!-- LEFT -->
+    <div class="left-box">
+      <h2>API</h2>
       <ul>
-        <li><code>GET /api</code> — API index (JSON)</li>
-        <li><code>GET /api/albums</code> — Returns all albums (JSON)</li>
-        <li><code>GET /api/albums/:id</code> — Returns a single album by id</li>
-        <li><code>POST /api/upload</code> — Upload image (form-data with field <strong>image</strong>)</li>
+        <li><a href="/api">API Index</a></li>
+        <li><a href="/api/albums">All Albums</a></li>
+        <li><a href="/api/albums/1">Album #1</a></li>
       </ul>
-      <p><a class="btn" href="/api/albums" target="_blank">View All Albums (JSON)</a></p>
-      <p class="hint">Place album cover images in <code>public/images/</code>. Example cover paths: <code>/images/scorpion.jpg</code></p>
-    </section>
+    </div>
 
-    <section class="right card">
-      <h2>Preview — First Album</h2>
-      <div class="preview">
-        <img src="/images/thank-me-later.jpg" alt="cover preview" onerror="this.style.opacity=0.25" />
-        <pre class="json">
-{
-  "_id":1,
-  "title":"Thank Me Later",
-  "year":2010,
-  "cover":"/images/thank-me-later.jpg"
-}
-        </pre>
-      </div>
-    </section>
-  </main>
+    <!-- RIGHT -->
+    <div class="right-box">
+      <h2>Preview: All Albums</h2>
+      <pre id="preview">Loading…</pre>
+    </div>
 
-  <footer class="footer">
-    <small>Deployed: <em>your Render URL here</em> — use this base to point your client (REACT_APP_API_BASE).</small>
-  </footer>
+  </div>
+
+  <script>
+    fetch("/api/albums")
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("preview").textContent =
+          JSON.stringify(data, null, 2);
+      })
+      .catch(err => {
+        document.getElementById("preview").textContent =
+          "Error: " + err;
+      });
+  </script>
+
 </body>
 </html>

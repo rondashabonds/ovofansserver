@@ -1,18 +1,109 @@
-:root{
-  --bg:#071025; --card:#0d1a2b; --muted:#9fb8d6; --accent:#f49f9a;
+/* ---------- Base Styles ---------- */
+body {
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f2f4f7;
+  margin: 0;
+  padding: 30px;
+  color: #222;
 }
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--muted);padding:28px}
-.site-header{max-width:1100px;margin:0 auto 18px}
-h1{color:#fff;margin:0}
-.sub{margin:6px 0 0;color:#c9dff3}
-.wrap{max-width:1100px;margin:0 auto;display:flex;gap:20px;flex-wrap:wrap}
-.card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
-.left{flex:1 1 360px}
-.right{flex:1 1 360px}
-.btn{display:inline-block;padding:10px 14px;border-radius:8px;background:var(--accent);color:#071025;font-weight:700;text-decoration:none}
-.json{background:#02111b;color:#d9f0ff;padding:12px;border-radius:8px;overflow:auto}
-.preview img{max-width:150px;border-radius:8px;display:block;margin-bottom:8px}
-.hint{font-size:0.9rem;color:#7fa0c9;margin-top:10px}
-.footer{max-width:1100px;margin:18px auto 0;color:#6f9bbf;font-size:0.9rem}
-@media (max-width:800px){.wrap{flex-direction:column}}
+
+.page-title {
+  font-size: 34px;
+  font-weight: 700;
+  margin-bottom: 25px;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+
+/* ---------- Layout ---------- */
+.layout {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 25px;
+}
+
+/* ---------- Left Box (API links) ---------- */
+.left-box {
+  flex: 1;
+  max-width: 35%;
+  background: white;
+  border: 1px solid #d6d6d6;
+  padding: 22px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.left-box h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  border-bottom: 2px solid #ececec;
+  padding-bottom: 6px;
+}
+
+.left-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.left-box li {
+  margin-bottom: 14px;
+}
+
+.left-box a {
+  font-size: 18px;
+  color: #0a66c2;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.left-box a:hover {
+  color: #004a93;
+  text-decoration: underline;
+}
+
+/* ---------- Right Box (JSON preview) ---------- */
+.right-box {
+  flex: 1.5;
+  max-width: 65%;
+  background: white;
+  border: 1px solid #d6d6d6;
+  padding: 22px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.right-box h2 {
+  margin-top: 0;
+  font-size: 22px;
+  border-bottom: 2px solid #ececec;
+  padding-bottom: 6px;
+}
+
+/* ---------- Pretty JSON Box ---------- */
+pre {
+  background: #f5f7fa;
+  padding: 18px;
+  border-radius: 8px;
+  border: 1px solid #dcdcdc;
+  height: 450px;
+  overflow: auto;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.05);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .left-box, .right-box {
+    max-width: 100%;
+  }
+}
