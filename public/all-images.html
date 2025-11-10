@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>All Drake Images</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <h1>All Drake Album Images</h1>
+
+  <div id="gallery" class="gallery-grid">Loading images...</div>
+
+  <script>
+    fetch("/api/all-images")
+      .then(res => res.json())
+      .then(images => {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = images
+          .map(img => `<img src="${img}" class="album-img">`)
+          .join("");
+      });
+  </script>
+
+</body>
+</html>

@@ -4,6 +4,9 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const albums = require("./data/albums");
+const fs = require("fs");
+const path = require("path");
+
 
 const app = express();
 
@@ -96,4 +99,18 @@ app.use((req, res) => {
 
 // ---- Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`ovofansserver listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`ovofansserver listening on port ${PORT}`)); 
+
+app.get("/api/all-images", (req, res) => {
+  const imagesPath = path.join(__dirname, "public", "images");
+
+  fs.readdir(imagesPath, (err, files) => {
+    if (err) {
+      return res.status(500).json({ error: "Could not load images" });
+    }
+
+    const imageUrls = files.map(file => `/images/${file}`);
+    res.json(imageUrls);
+  });
+});
+
