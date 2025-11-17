@@ -1,116 +1,144 @@
-// server.js
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
-const path = require("path");
-const albums = require("./data/albums");
 const fs = require("fs");
 const path = require("path");
+const albums = require("./data/albums");
 
+const projects = [];
 
 const app = express();
 
-// ---- Middleware
-app.use(cors());                     // allow client on a different origin
-app.use(express.json());             // parse JSON bodies
+app.use(cors());
+app.use(express.json());
 app.use(
   express.static(path.join(__dirname, "public"), {
-    maxAge: "1d",                    // cache static assets for a day
-    extensions: ["html"],            // / -> index.html
+    maxAge: "1d",
+    extensions: ["html"],
   })
 );
 
-// Simple health check for Render
-app.get("/healthz", (req, res) => res.status(200).send("ok"));
+app.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
-// ---- Multer (uploads saved to public/images)
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, path.join(__dirname, "public", "images")),
-  filename: (_, file, cb) => cb(null, file.originalname),
+  destination: (_req, _file, cb) =>
+    cb(null, path.join(__dirname, "public", "images")),
+  filename: (_req, file, cb) =>
+    cb(null, file.originalname),
 });
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// ---- API index (JSON)
-app.get("/api", (req, res) => {
+app.get("/api/projects", (req, res) => {
+  res.json(projects);
+});
+
+app.post("/api/projects", upload.single("img"), (req, res) => {
+  const { title, category, year, blurb } = req.body;
+
+  if (!title || !category || !year || !blurb) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  const newProject = {
+    _id: projects.length + 1,
+    title,
+    category,
+    year,
+    blurb,
+    img: req.file
+      ? `http://localhost:5000/images/${req.file.originalname}`
+      : null,
+  };
+
+  projects.push(newProject);
+
+  res.status(200).json(newProject);
+});
+
+app.delete("/api/projects/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const index = projects.findIndex((p) => p._id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  const removed = projects.splice(index, 1)[0];
+
+  if (removed.img) {
+    const fileName = removed.img.split("/images/")[1];
+    const imgPath = path.join(__dirname, "public", "images", fileName);
+
+    fs.unlink(imgPath, (err) => {
+      if (err) console.log("Image delete error:", err);
+    });
+  }
+
+  res.json({ message: "Project deleted", removed });
+});
+
+app.get("/api", (_req, res) => {
   res.json({
     name: "ovofansserver",
-    description: "API serving a list of Drake albums for the ovoFans client",
+    description: "API serving Drake albums and projects",
     endpoints: [
-      { path: "/api/albums", method: "GET", description: "Get all albums" },
-      { path: "/api/albums/:id", method: "GET", description: "Get single album by id" },
-      { path: "/api/upload", method: "POST", description: "Upload an image (multipart/form-data field 'image')" }
-    ]
+      { path: "/api/albums", method: "GET" },
+      { path: "/api/projects", method: "GET" },
+      { path: "/api/projects", method: "POST" },
+      { path: "/api/projects/:id", method: "DELETE" },
+    ],
   });
 });
 
-// ---- Get all albums
-// Optional query: ?q=care (case-insensitive title match)
 app.get("/api/albums", (req, res) => {
   const q = (req.query.q || "").trim().toLowerCase();
   const result = q
-    ? albums.filter(a => a.title.toLowerCase().includes(q))
+    ? albums.filter((a) => a.title.toLowerCase().includes(q))
     : albums;
   res.json(result);
 });
 
-// ---- Get one album by id
 app.get("/api/albums/:id", (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    return res.status(400).json({ error: "Invalid album id" });
-  }
-  const album = albums.find(a => a._id === id);
-  if (!album) {
-    return res.status(404).json({ error: "Album not found" });
-  }
+  const album = albums.find((a) => a._id === id);
+  if (!album) return res.status(404).json({ error: "Album not found" });
   res.json(album);
 });
 
-// Convenience: album cover redirect (/api/albums/3/cover -> /images/xxx.jpg)
-app.get("/api/albums/:id/cover", (req, res) => {
-  const id = Number(req.params.id);
-  const album = albums.find(a => a._id === id);
-  if (!album) return res.status(404).json({ error: "Album not found" });
-  return res.redirect(album.cover);
+app.get("/api/all-images", (_req, res) => {
+  const imagesPath = path.join(__dirname, "public", "images");
+  fs.readdir(imagesPath, (err, files) => {
+    if (err) return res.status(500).json({ error: "Could not load images" });
+    res.json(files.map((file) => `/images/${file}`));
+  });
 });
 
-// ---- Upload image endpoint (optional)
 app.post("/api/upload", upload.single("image"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  res.json({ message: "Upload successful", path: `/images/${req.file.originalname}` });
+  if (!req.file)
+    return res.status(400).json({ error: "No file uploaded" });
+
+  res.json({
+    message: "Upload successful",
+    path: `http://localhost:5000/images/${req.file.originalname}`,
+  });
 });
 
-// ---- API landing page (pretty docs in /public/index.html)
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ---- 404 (keep this AFTER all routes)
 app.use((req, res) => {
   if (req.path.startsWith("/api")) {
     return res.status(404).json({ error: "API route not found" });
   }
-  // For non-API paths, fall back to index.html so the docs always show.
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ---- Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`ovofansserver listening on port ${PORT}`)); 
-
-app.get("/api/all-images", (req, res) => {
-  const imagesPath = path.join(__dirname, "public", "images");
-
-  fs.readdir(imagesPath, (err, files) => {
-    if (err) {
-      return res.status(500).json({ error: "Could not load images" });
-    }
-
-    const imageUrls = files.map(file => `/images/${file}`);
-    res.json(imageUrls);
-  });
-});
-
+app.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}`)
+);
