@@ -9,8 +9,16 @@ const projects = [];
 
 const app = express();
 
-app.use(cors());
+// 🔥 FIXED CORS FOR GITHUB PAGES + RENDER
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
+
+// Static files
 app.use(
   express.static(path.join(__dirname, "public"), {
     maxAge: "1d",
@@ -18,8 +26,10 @@ app.use(
   })
 );
 
+// Health check
 app.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
+// Multer storage
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) =>
     cb(null, path.join(__dirname, "public", "images")),
@@ -32,6 +42,14 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
+// Helper: dynamic base URL
+const BASE_URL =
+  process.env.RENDER_EXTERNAL_URL ||
+  process.env.BASE_URL ||
+  "";
+
+// -------------------- PROJECT ROUTES --------------------
+
 app.get("/api/projects", (req, res) => {
   res.json(projects);
 });
@@ -43,15 +61,18 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  // 🔥 FIXED: dynamic URL, not localhost
+  const imageUrl = req.file
+    ? `${BASE_URL}/images/${req.file.originalname}`
+    : null;
+
   const newProject = {
     _id: projects.length + 1,
     title,
     category,
     year,
     blurb,
-    img: req.file
-      ? `http://localhost:5000/images/${req.file.originalname}`
-      : null,
+    img: imageUrl,
   };
 
   projects.push(newProject);
@@ -81,6 +102,8 @@ app.delete("/api/projects/:id", (req, res) => {
   res.json({ message: "Project deleted", removed });
 });
 
+// -------------------- ALBUM ROUTES --------------------
+
 app.get("/api", (_req, res) => {
   res.json({
     name: "ovofansserver",
@@ -109,6 +132,7 @@ app.get("/api/albums/:id", (req, res) => {
   res.json(album);
 });
 
+// -------------------- IMAGE LIST --------------------
 app.get("/api/all-images", (_req, res) => {
   const imagesPath = path.join(__dirname, "public", "images");
   fs.readdir(imagesPath, (err, files) => {
@@ -117,16 +141,19 @@ app.get("/api/all-images", (_req, res) => {
   });
 });
 
+// -------------------- UPLOAD ROUTE --------------------
 app.post("/api/upload", upload.single("image"), (req, res) => {
   if (!req.file)
     return res.status(400).json({ error: "No file uploaded" });
 
+  // 🔥 FIXED: dynamic URL
   res.json({
     message: "Upload successful",
-    path: `http://localhost:5000/images/${req.file.originalname}`,
+    path: `${BASE_URL}/images/${req.file.originalname}`,
   });
 });
 
+// -------------------- FRONTEND FALLBACK --------------------
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -138,6 +165,7 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// -------------------- START SERVER --------------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)
