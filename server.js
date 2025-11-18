@@ -5,11 +5,27 @@ const fs = require("fs");
 const path = require("path");
 const albums = require("./data/albums");
 
-const projects = [];
-
 const app = express();
 
-// 🔥 FIXED CORS FOR GITHUB PAGES + RENDER
+// -------------- PROJECT PERSISTENCE --------------
+const PROJECT_FILE = path.join(__dirname, "data", "projects.json");
+
+let projects = [];
+try {
+  if (fs.existsSync(PROJECT_FILE)) {
+    const raw = fs.readFileSync(PROJECT_FILE, "utf8");
+    projects = JSON.parse(raw);
+  }
+} catch (err) {
+  console.log("Error reading project file:", err);
+  projects = [];
+}
+
+function saveProjects() {
+  fs.writeFileSync(PROJECT_FILE, JSON.stringify(projects, null, 2));
+}
+// -------------------------------------------------
+
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -18,7 +34,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Static files
 app.use(
   express.static(path.join(__dirname, "public"), {
     maxAge: "1d",
@@ -26,10 +41,8 @@ app.use(
   })
 );
 
-// Health check
 app.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
-// Multer storage
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) =>
     cb(null, path.join(__dirname, "public", "images")),
@@ -42,7 +55,6 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// Helper: dynamic base URL
 const BASE_URL =
   process.env.RENDER_EXTERNAL_URL ||
   process.env.BASE_URL ||
@@ -61,13 +73,12 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // 🔥 FIXED: dynamic URL, not localhost
   const imageUrl = req.file
     ? `${BASE_URL}/images/${req.file.originalname}`
     : null;
 
   const newProject = {
-    _id: projects.length + 1,
+    _id: Date.now(),
     title,
     category,
     year,
@@ -76,6 +87,7 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
   };
 
   projects.push(newProject);
+  saveProjects(); // 🔥 Save to file
 
   res.status(200).json(newProject);
 });
@@ -89,6 +101,7 @@ app.delete("/api/projects/:id", (req, res) => {
   }
 
   const removed = projects.splice(index, 1)[0];
+  saveProjects(); // 🔥 Save to file
 
   if (removed.img) {
     const fileName = removed.img.split("/images/")[1];
@@ -103,19 +116,6 @@ app.delete("/api/projects/:id", (req, res) => {
 });
 
 // -------------------- ALBUM ROUTES --------------------
-
-app.get("/api", (_req, res) => {
-  res.json({
-    name: "ovofansserver",
-    description: "API serving Drake albums and projects",
-    endpoints: [
-      { path: "/api/albums", method: "GET" },
-      { path: "/api/projects", method: "GET" },
-      { path: "/api/projects", method: "POST" },
-      { path: "/api/projects/:id", method: "DELETE" },
-    ],
-  });
-});
 
 app.get("/api/albums", (req, res) => {
   const q = (req.query.q || "").trim().toLowerCase();
@@ -146,7 +146,6 @@ app.post("/api/upload", upload.single("image"), (req, res) => {
   if (!req.file)
     return res.status(400).json({ error: "No file uploaded" });
 
-  // 🔥 FIXED: dynamic URL
   res.json({
     message: "Upload successful",
     path: `${BASE_URL}/images/${req.file.originalname}`,
