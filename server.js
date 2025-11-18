@@ -8,7 +8,7 @@ const albums = require("./data/albums");
 const app = express();
 
 // -------------------- PROJECT STORAGE --------------------
-const PROJECT_FILE = path.join(__dirname, "data", "projects.json");
+const PROJECT_FILE = path.join(process.cwd(), "data", "projects.json");
 
 let projects = [];
 try {
