@@ -7,21 +7,27 @@ const albums = require("./data/albums");
 
 const app = express();
 
-const DATA_DIR = path.join(process.cwd(), "data");
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+const DATA_DIR = path.join(__dirname, "data");
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR);
+}
 
 const PROJECT_FILE = path.join(DATA_DIR, "projects.json");
-
 let projects = [];
-try {
-  if (fs.existsSync(PROJECT_FILE)) {
+
+if (fs.existsSync(PROJECT_FILE)) {
+  try {
     const raw = fs.readFileSync(PROJECT_FILE, "utf8");
     projects = JSON.parse(raw);
-  } else {
-    fs.writeFileSync(PROJECT_FILE, "[]");
+  } catch {
     projects = [];
   }
-} catch {
+} else {
+  fs.writeFileSync(PROJECT_FILE, "[]");
   projects = [];
 }
 
@@ -31,23 +37,24 @@ function saveProjects() {
   } catch {}
 }
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+const IMAGES_DIR = path.join(__dirname, "images");
+if (!fs.existsSync(IMAGES_DIR)) {
+  fs.mkdirSync(IMAGES_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, IMAGES_DIR),
+  filename: (_req, file, cb) => cb(null, file.originalname),
+});
+
+const upload = multer({ storage });
+
+app.use("/images", express.static(path.join(__dirname, "images")));
 
 const BASE_URL =
   process.env.RENDER_EXTERNAL_URL ||
   process.env.BASE_URL ||
   "";
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) =>
-    cb(null, path.join(__dirname, "public", "images")),
-  filename: (_req, file, cb) =>
-    cb(null, file.originalname),
-});
-
-const upload = multer({ storage });
 
 app.get("/api/projects", (req, res) => {
   res.json(projects);
@@ -57,7 +64,7 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
   const { title, category, year, blurb } = req.body;
 
   if (!title || !category || !year || !blurb) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return res.status(400).json({ error: "Missing fields" });
   }
 
   const imageUrl = req.file
@@ -89,7 +96,7 @@ app.delete("/api/projects/:id", (req, res) => {
 
   if (removed.img) {
     const fileName = removed.img.split("/images/")[1];
-    const filePath = path.join(__dirname, "public", "images", fileName);
+    const filePath = path.join(IMAGES_DIR, fileName);
     fs.unlink(filePath, () => {});
   }
 
@@ -105,4 +112,4 @@ app.get("/*", (_req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {});
+app.listen(PORT);
