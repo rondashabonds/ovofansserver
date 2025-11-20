@@ -7,28 +7,16 @@ const albums = require("./data/albums");
 
 const app = express();
 
-const PUBLIC_DIR = path.join(__dirname, "public");
-const IMAGES_DIR = path.join(PUBLIC_DIR, "images");
-
-if (!fs.existsSync(PUBLIC_DIR)) {
-  fs.mkdirSync(PUBLIC_DIR);
-}
-
-if (!fs.existsSync(IMAGES_DIR)) {
-  fs.mkdirSync(IMAGES_DIR, { recursive: true });
-}
-
 const DATA_DIR = path.join(process.cwd(), "data");
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR);
-}
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
 const PROJECT_FILE = path.join(DATA_DIR, "projects.json");
 
 let projects = [];
 try {
   if (fs.existsSync(PROJECT_FILE)) {
-    projects = JSON.parse(fs.readFileSync(PROJECT_FILE, "utf8"));
+    const raw = fs.readFileSync(PROJECT_FILE, "utf8");
+    projects = JSON.parse(raw);
   } else {
     fs.writeFileSync(PROJECT_FILE, "[]");
     projects = [];
@@ -45,15 +33,18 @@ function saveProjects() {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(PUBLIC_DIR));
+app.use(express.static(path.join(__dirname, "public")));
 
 const BASE_URL =
   process.env.RENDER_EXTERNAL_URL ||
-  "https://ovofansserver.onrender.com";
+  process.env.BASE_URL ||
+  "";
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, IMAGES_DIR),
-  filename: (req, file, cb) => cb(null, file.originalname),
+  destination: (_req, _file, cb) =>
+    cb(null, path.join(__dirname, "public", "images")),
+  filename: (_req, file, cb) =>
+    cb(null, file.originalname),
 });
 
 const upload = multer({ storage });
@@ -84,23 +75,22 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
 
   projects.push(newProject);
   saveProjects();
-
   res.json(newProject);
 });
 
 app.delete("/api/projects/:id", (req, res) => {
   const id = Number(req.params.id);
-  const index = projects.findIndex((p) => p._id === id);
 
+  const index = projects.findIndex((p) => p._id === id);
   if (index === -1) return res.status(404).json({ error: "Not found" });
 
   const removed = projects.splice(index, 1)[0];
   saveProjects();
 
   if (removed.img) {
-    const filename = removed.img.split("/images/")[1];
-    const filepath = path.join(IMAGES_DIR, filename);
-    fs.unlink(filepath, () => {});
+    const fileName = removed.img.split("/images/")[1];
+    const filePath = path.join(__dirname, "public", "images", fileName);
+    fs.unlink(filePath, () => {});
   }
 
   res.json({ removed });
@@ -110,9 +100,9 @@ app.get("/api/albums", (req, res) => {
   res.json(albums);
 });
 
-app.get("/*", (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+app.get("/*", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {});
