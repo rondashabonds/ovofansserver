@@ -56,9 +56,11 @@ const BASE_URL =
   process.env.BASE_URL ||
   "";
 
+
 app.get("/api/projects", (req, res) => {
   res.json(projects);
 });
+
 
 app.post("/api/projects", upload.single("img"), (req, res) => {
   const { title, category, year, blurb } = req.body;
@@ -85,6 +87,50 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
   res.json(newProject);
 });
 
+app.put("/api/projects/:id", upload.single("img"), (req, res) => {
+  const id = Number(req.params.id);
+
+  const index = projects.findIndex((p) => p._id === id);
+  if (index === -1) return res.status(404).json({ error: "Project not found" });
+
+  const { title, category, year, blurb } = req.body;
+
+  if (!title || !category || !year || !blurb) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  
+  let imageUrl = projects[index].img;
+
+  
+  if (req.file) {
+    imageUrl = `${BASE_URL}/images/${req.file.originalname}`;
+
+    
+    const oldFile = projects[index].img?.split("/images/")[1];
+    if (oldFile) {
+      const oldPath = path.join(IMAGES_DIR, oldFile);
+      fs.unlink(oldPath, () => {});
+    }
+  }
+
+  
+  const updated = {
+    ...projects[index],
+    title,
+    category,
+    year,
+    blurb,
+    img: imageUrl,
+  };
+
+  projects[index] = updated;
+  saveProjects();
+
+  res.json(updated);
+});
+
+
 app.delete("/api/projects/:id", (req, res) => {
   const id = Number(req.params.id);
 
@@ -103,13 +149,16 @@ app.delete("/api/projects/:id", (req, res) => {
   res.json({ removed });
 });
 
+
 app.get("/api/albums", (req, res) => {
   res.json(albums);
 });
 
+
 app.get("/*", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);
