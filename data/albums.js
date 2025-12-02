@@ -5,7 +5,7 @@ const albums = [
     title: "Thank Me Later",
     year: 2010,
     type: "Album",
-    cover: "/images/thank-me-later.jpg",
+    cover: "/images/images (1).jpg",
     short: "Debut studio album from Drake",
     tracks: ["Fireworks","Over","Shot for Me","Find Your Love","Fancy"]
   },
@@ -68,7 +68,7 @@ const albums = [
     title: "For All the Dogs",
     year: 2023,
     type: "Album",
-    cover: "/images/for-all-the-dogs.jpg",
+    cover: "/images/d7.jpgjpg",
     short: "Latest studio album (2023)",
     tracks: ["Virginia Beach","First Person Shooter","Waiting For You","8am in Charlotte","Forever & Ever"]
   }
