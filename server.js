@@ -1,8 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
+const Joi = require("joi");
 const albums = require("./data/albums");
 
 const app = express();
@@ -11,31 +14,24 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const DATA_DIR = path.join(__dirname, "data");
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR);
-}
+mongoose.connect(process.env.MONGO_URI);
 
-const PROJECT_FILE = path.join(DATA_DIR, "projects.json");
-let projects = [];
+const projectSchema = new mongoose.Schema({
+  title: String,
+  category: String,
+  year: String,
+  blurb: String,
+  img: String
+});
+const Project = mongoose.model("Project", projectSchema);
 
-if (fs.existsSync(PROJECT_FILE)) {
-  try {
-    const raw = fs.readFileSync(PROJECT_FILE, "utf8");
-    projects = JSON.parse(raw);
-  } catch {
-    projects = [];
-  }
-} else {
-  fs.writeFileSync(PROJECT_FILE, "[]");
-  projects = [];
-}
-
-function saveProjects() {
-  try {
-    fs.writeFileSync(PROJECT_FILE, JSON.stringify(projects, null, 2));
-  } catch {}
-}
+const projectValidation = Joi.object({
+  title: Joi.string().required(),
+  category: Joi.string().required(),
+  year: Joi.string().required(),
+  blurb: Joi.string().required(),
+  img: Joi.string().allow("")
+});
 
 const IMAGES_DIR = path.join(__dirname, "images");
 if (!fs.existsSync(IMAGES_DIR)) {
@@ -44,9 +40,8 @@ if (!fs.existsSync(IMAGES_DIR)) {
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, IMAGES_DIR),
-  filename: (_req, file, cb) => cb(null, file.originalname),
+  filename: (_req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
 });
-
 const upload = multer({ storage });
 
 app.use("/images", express.static(path.join(__dirname, "images")));
@@ -56,109 +51,48 @@ const BASE_URL =
   process.env.BASE_URL ||
   "";
 
-
-app.get("/api/projects", (req, res) => {
-  res.json(projects);
+app.get("/api/projects", async (req, res) => {
+  const list = await Project.find();
+  res.json(list);
 });
 
+app.post("/api/projects", upload.single("img"), async (req, res) => {
+  const data = req.body;
+  if (req.file) data.img = `${BASE_URL}/images/${req.file.filename}`;
 
-app.post("/api/projects", upload.single("img"), (req, res) => {
-  const { title, category, year, blurb } = req.body;
+  const { error } = projectValidation.validate(data);
+  if (error) return res.status(400).json({ error: error.message });
 
-  if (!title || !category || !year || !blurb) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
-
-  const imageUrl = req.file
-    ? `${BASE_URL}/images/${req.file.originalname}`
-    : null;
-
-  const newProject = {
-    _id: Date.now(),
-    title,
-    category,
-    year,
-    blurb,
-    img: imageUrl,
-  };
-
-  projects.push(newProject);
-  saveProjects();
-  res.json(newProject);
+  const project = await Project.create(data);
+  res.json(project);
 });
 
-app.put("/api/projects/:id", upload.single("img"), (req, res) => {
-  const id = Number(req.params.id);
+app.put("/api/projects/:id", upload.single("img"), async (req, res) => {
+  const data = req.body;
+  const id = req.params.id;
 
-  const index = projects.findIndex((p) => p._id === id);
-  if (index === -1) return res.status(404).json({ error: "Project not found" });
+  if (req.file) data.img = `${BASE_URL}/images/${req.file.filename}`;
 
-  const { title, category, year, blurb } = req.body;
+  const { error } = projectValidation.validate(data);
+  if (error) return res.status(400).json({ error: error.message });
 
-  if (!title || !category || !year || !blurb) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
-
-  
-  let imageUrl = projects[index].img;
-
-  
-  if (req.file) {
-    imageUrl = `${BASE_URL}/images/${req.file.originalname}`;
-
-    
-    const oldFile = projects[index].img?.split("/images/")[1];
-    if (oldFile) {
-      const oldPath = path.join(IMAGES_DIR, oldFile);
-      fs.unlink(oldPath, () => {});
-    }
-  }
-
-  
-  const updated = {
-    ...projects[index],
-    title,
-    category,
-    year,
-    blurb,
-    img: imageUrl,
-  };
-
-  projects[index] = updated;
-  saveProjects();
-
+  const updated = await Project.findByIdAndUpdate(id, data, { new: true });
   res.json(updated);
 });
 
-
-app.delete("/api/projects/:id", (req, res) => {
-  const id = Number(req.params.id);
-
-  const index = projects.findIndex((p) => p._id === id);
-  if (index === -1) return res.status(404).json({ error: "Not found" });
-
-  const removed = projects.splice(index, 1)[0];
-  saveProjects();
-
-  if (removed.img) {
-    const fileName = removed.img.split("/images/")[1];
-    const filePath = path.join(IMAGES_DIR, fileName);
-    fs.unlink(filePath, () => {});
-  }
-
-  res.json({ removed });
+app.delete("/api/projects/:id", async (req, res) => {
+  const id = req.params.id;
+  const deleted = await Project.findByIdAndDelete(id);
+  res.json(deleted);
 });
-
 
 app.get("/api/albums", (req, res) => {
   res.json(albums);
 });
 
-
 app.get("/*", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);
