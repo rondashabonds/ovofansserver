@@ -13,7 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
-
+console.log("MONGO_URI from Render:", process.env.MONGO_URI);
 mongoose.connect(process.env.MONGO_URI);
 
 const projectSchema = new mongoose.Schema({
@@ -23,6 +23,7 @@ const projectSchema = new mongoose.Schema({
   blurb: String,
   img: String
 });
+
 const Project = mongoose.model("Project", projectSchema);
 
 const projectValidation = Joi.object({
