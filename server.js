@@ -45,7 +45,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-app.use("/images", express.static(path.join(__dirname, "images")));
+app.use("/images", express.static(path.join(__dirname, "public/images")));
 
 const BASE_URL =
   process.env.RENDER_EXTERNAL_URL ||
